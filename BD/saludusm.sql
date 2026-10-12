@@ -123,9 +123,10 @@ CREATE TABLE Cita (
     id_centro INT NOT NULL,
     id_especialidad INT NOT NULL,
     id_estado TINYINT NOT NULL DEFAULT 1,
+    activa TINYINT AS (IF(id_estado = 5, NULL, 1)) STORED,
     -- sin sobreagendamiento
-    CONSTRAINT unq_medico_hora UNIQUE (id_medico, fecha_hora),
-    CONSTRAINT unq_paciente_hora UNIQUE (id_paciente, fecha_hora),
+    CONSTRAINT unq_medico_hora UNIQUE (id_medico, fecha_hora, activa),
+    CONSTRAINT unq_paciente_hora UNIQUE (id_paciente, fecha_hora, activa),
     FOREIGN KEY (id_paciente) REFERENCES Paciente(id_paciente) ON DELETE CASCADE,
     FOREIGN KEY (id_estado) REFERENCES EstadoCita(id_estado),
     FOREIGN KEY (id_medico, id_especialidad)

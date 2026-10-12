@@ -63,7 +63,8 @@ if (!empty($fecha_seleccionada)) {
                      FROM Cita 
                      WHERE (id_medico = :id_medico OR id_paciente = :id_paciente)
                        AND DATE(fecha_hora) = :fecha 
-                       AND id_cita != :id_cita_actual";
+                       AND id_cita != :id_cita_actual
+                       AND id_estado <> 5";
                        
     $stmt_ocupadas = $pdo->prepare($sql_ocupadas);
     $stmt_ocupadas->execute([
@@ -84,7 +85,7 @@ if (!empty($fecha_seleccionada)) {
 }
 
 // 3) procesar la actualizacion si el paciente eligio un horario nuevo.
-if (isset($_POST['hora_nueva'])) {
+if (isset($_POST['hora_nueva']) && in_array($_POST['hora_nueva'], $bloques_disponibles)) {
     $nueva_fecha_hora = $fecha_seleccionada . ' ' . $_POST['hora_nueva'] . ':00';
     
     try {
@@ -105,6 +106,8 @@ if (isset($_POST['hora_nueva'])) {
             $error_update = "Error al reprogramar. Es posible que el horario ya se haya ocupado.";
         }
     }
+} elseif (isset($_POST['hora_nueva'])) {
+    $error_update = "El horario seleccionado no es válido o ya no está disponible.";
 }
 
 include 'header.php';

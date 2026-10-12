@@ -25,39 +25,50 @@ $sql = "SELECT v.fecha_hora, v.nombre_paciente AS paciente, v.nombre_medico AS m
                v.especialidad, v.nombre_centro AS centro, v.estado
         FROM vw_citas_detalle v
         WHERE 1=1 ";
+$params = [];
 
 // restriccion por rol
 if ($rol_usuario == 1) {
     // el paciente ve sus citas
-    $sql .= " AND v.id_paciente = $id_usuario ";
+    $sql .= " AND v.id_paciente = ? ";
+    $params[] = $id_usuario;
 } elseif ($rol_usuario == 2) {
     // el medico ve sus citas
-    $sql .= " AND v.id_medico = $id_usuario ";
+    $sql .= " AND v.id_medico = ? ";
+    $params[] = $id_usuario;
 }
 // si es admin (rol 3), no agregamos nada y podrá ver todas las de la red
 if (!empty($_GET['fecha_desde'])) {
-    $sql .= " AND DATE(v.fecha_hora) >= '" . $_GET['fecha_desde'] . "' ";
+    $sql .= " AND DATE(v.fecha_hora) >= ? ";
+    $params[] = $_GET['fecha_desde'];
 }
 if (!empty($_GET['fecha_hasta'])) {
-    $sql .= " AND DATE(v.fecha_hora) <= '" . $_GET['fecha_hasta'] . "' ";
+    $sql .= " AND DATE(v.fecha_hora) <= ? ";
+    $params[] = $_GET['fecha_hasta'];
 }
 if (!empty($_GET['id_centro'])) {
-    $sql .= " AND v.id_centro = " . $_GET['id_centro'] . " ";
+    $sql .= " AND v.id_centro = ? ";
+    $params[] = $_GET['id_centro'];
 }
 if (!empty($_GET['region'])) {
-    $sql .= " AND v.region = '" . $_GET['region'] . "' ";
+    $sql .= " AND v.region = ? ";
+    $params[] = $_GET['region'];
 }
 if (!empty($_GET['id_especialidad'])) {
-    $sql .= " AND v.id_especialidad = " . $_GET['id_especialidad'] . " ";
+    $sql .= " AND v.id_especialidad = ? ";
+    $params[] = $_GET['id_especialidad'];
 }
 if (!empty($_GET['id_medico'])) {
-    $sql .= " AND v.id_medico = " . $_GET['id_medico'] . " ";
+    $sql .= " AND v.id_medico = ? ";
+    $params[] = $_GET['id_medico'];
 }
 if (!empty($_GET['id_estado'])) {
-    $sql .= " AND v.id_estado = " . $_GET['id_estado'] . " ";
+    $sql .= " AND v.id_estado = ? ";
+    $params[] = $_GET['id_estado'];
 }
 if (!empty($_GET['id_prevision'])) {
-    $sql .= " AND v.id_prevision = " . $_GET['id_prevision'] . " ";
+    $sql .= " AND v.id_prevision = ? ";
+    $params[] = $_GET['id_prevision'];
 }
 
 $sql .= " ORDER BY v.fecha_hora DESC";
@@ -67,7 +78,9 @@ $busqueda_activa = false;
 
 if (isset($_GET['buscar'])) {
     $busqueda_activa = true;
-    $resultados = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    $stmt_busqueda = $pdo->prepare($sql);
+    $stmt_busqueda->execute($params);
+    $resultados = $stmt_busqueda->fetchAll(PDO::FETCH_ASSOC);
 }
 
 include 'header.php';

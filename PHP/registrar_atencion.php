@@ -49,6 +49,11 @@ if (isset($_POST['guardar_atencion'])) {
     $obs_form = $obs;
 
     $diag_post = isset($_POST['diagnostico']) ? array_values(array_unique(array_filter($_POST['diagnostico'], function ($d) { return $d !== ''; }))) : [];
+    $nuevo_codigo = strtoupper(trim(isset($_POST['nuevo_codigo']) ? $_POST['nuevo_codigo'] : ''));
+    $nueva_desc = trim(isset($_POST['nueva_descripcion']) ? $_POST['nueva_descripcion'] : '');
+    if ($nuevo_codigo !== '' && !in_array($nuevo_codigo, $diag_post)) {
+        $diag_post[] = $nuevo_codigo;
+    }
     $recetas_post = [];
     $meds = isset($_POST['med']) ? $_POST['med'] : [];
     foreach ($meds as $k => $m) {
@@ -67,6 +72,8 @@ if (isset($_POST['guardar_atencion'])) {
         $mensaje_error = "Solo se puede registrar una atención si la cita está en estado Atendida.";
     } elseif ($motivo === '' || $obs === '') {
         $mensaje_error = "El motivo de consulta y las observaciones son obligatorios.";
+    } elseif (($nuevo_codigo !== '' || $nueva_desc !== '') && ($nueva_desc === '' || !preg_match('/^[A-Z][0-9]{2}(\.[0-9A-Z]{1,4})?$/', $nuevo_codigo))) {
+        $mensaje_error = "Para crear un diagnóstico nuevo ingrese un código CIE-10 válido (ej: J06.9) y su descripción.";
     } elseif (count($diag_post) < 1) {
         $mensaje_error = "Debe ingresar al menos un diagnóstico.";
     } else {
@@ -93,6 +100,10 @@ if (isset($_POST['guardar_atencion'])) {
             }
 
             // 2)guardar diagnosticos
+            if ($nuevo_codigo !== '') {
+                $stmt = $pdo->prepare("INSERT INTO Diagnostico (codigo_cie10, descripcion) VALUES (?, ?) ON DUPLICATE KEY UPDATE codigo_cie10 = codigo_cie10");
+                $stmt->execute([$nuevo_codigo, $nueva_desc]);
+            }
             $stmt = $pdo->prepare("DELETE FROM Atencion_Diagnostico WHERE id_atencion = ?");
             $stmt->execute([$id_atencion]);
             $stmt = $pdo->prepare("INSERT INTO Atencion_Diagnostico (id_atencion, codigo_cie10) VALUES (?, ?)");
@@ -181,6 +192,14 @@ include 'header.php';
                     <?php endforeach; ?>
                 </div>
                 <button type="button" class="btn btn-sm btn-outline-primary mb-3" id="agregar_diagnostico">+ Agregar diagnóstico</button>
+                <div class="row mb-3">
+                    <div class="col-3">
+                        <input type="text" name="nuevo_codigo" class="form-control" placeholder="Nuevo código CIE-10" maxlength="10" value="<?php echo htmlspecialchars(isset($_POST['nuevo_codigo']) ? $_POST['nuevo_codigo'] : ''); ?>">
+                    </div>
+                    <div class="col-9">
+                        <input type="text" name="nueva_descripcion" class="form-control" placeholder="Descripción del nuevo diagnóstico" maxlength="255" value="<?php echo htmlspecialchars(isset($_POST['nueva_descripcion']) ? $_POST['nueva_descripcion'] : ''); ?>">
+                    </div>
+                </div>
 
                 <hr>
                 <h4>Receta</h4>

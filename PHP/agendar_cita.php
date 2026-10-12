@@ -58,7 +58,7 @@ if (!empty($medico_seleccionado) && !empty($fecha_seleccionada)) {
     // obtener las horas que ya estan ocupadas por el médico en esa fecha
     $sql_ocupadas = "SELECT DATE_FORMAT(fecha_hora, '%H:%i') as hora_ocupada 
                      FROM Cita 
-                     WHERE (id_medico = :id_med OR id_paciente = :id_pac) AND DATE(fecha_hora) = :fecha";
+                     WHERE (id_medico = :id_med OR id_paciente = :id_pac) AND DATE(fecha_hora) = :fecha AND id_estado <> 5";
     $stmt_ocupadas = $pdo->prepare($sql_ocupadas);
     $stmt_ocupadas->execute([':id_med' => $medico_seleccionado, ':id_pac' => $paciente_id, ':fecha' => $fecha_seleccionada]);
     $horas_ocupadas = $stmt_ocupadas->fetchAll(PDO::FETCH_COLUMN);
