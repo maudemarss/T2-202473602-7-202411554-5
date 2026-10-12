@@ -19,13 +19,15 @@ if (isset($_POST['agregar_centro'])) {
     $region = $_POST['region'];
 
     //verificamos si el codigo ya existe
-    $check = $pdo->query("SELECT id FROM CentroMedico WHERE codigo_interno = '$codigo'")->fetch();
+    $check = $pdo->prepare("SELECT id_centro FROM CentroMedico WHERE codigo_interno = ?");
+    $check->execute([$codigo]);
+    $check = $check->fetch();
     
     if ($check) {
         $mensaje = "<div class='alert alert-danger'>El código interno ya existe.</div>";
     } else {
-        $sql = "INSERT INTO CentroMedico (codigo_interno, nombre, comuna, region) VALUES ('$codigo', '$nombre', '$comuna', '$region')";
-        if ($pdo->query($sql)) {
+        $sql = $pdo->prepare("INSERT INTO CentroMedico (codigo_interno, nombre, comuna, region) VALUES (?, ?, ?, ?)");
+        if ($sql->execute([$codigo, $nombre, $comuna, $region])) {
             $mensaje = "<div class='alert alert-success'>Centro agregado correctamente.</div>";
         }
     }
@@ -37,10 +39,16 @@ if (isset($_GET['eliminar'])) {
     
     // por si acaso un try-catch por si el centro tiene medicos o citas
     try {
-        $pdo->query("DELETE FROM CentroMedico WHERE id = $id_eliminar");
+        $unico = $pdo->prepare("SELECT COUNT(*) FROM Medico_Centro mc WHERE mc.id_centro = ? AND NOT EXISTS (SELECT 1 FROM Medico_Centro otro WHERE otro.id_medico = mc.id_medico AND otro.id_centro <> mc.id_centro)");
+        $unico->execute([$id_eliminar]);
+        if ($unico->fetchColumn() > 0) {
+            throw new Exception("unico centro de un medico");
+        }
+        $del = $pdo->prepare("DELETE FROM CentroMedico WHERE id_centro = ?");
+        $del->execute([$id_eliminar]);
         $mensaje = "<div class='alert alert-success'>Centro eliminado.</div>";
     } catch (Exception $e) {
-        $mensaje = "<div class='alert alert-danger'>No se puede eliminar porque tiene datos asociados (médicos o citas).</div>";
+        $mensaje = "<div class='alert alert-danger'>No se puede eliminar porque tiene datos asociados (citas o médicos que atienden solo en este centro).</div>";
     }
 }
 
@@ -51,19 +59,21 @@ if (isset($_POST['editar_centro'])) {
     $comuna = $_POST['comuna'];
     $region = $_POST['region'];
 
-    $sql = "UPDATE CentroMedico SET nombre = '$nombre', comuna = '$comuna', region = '$region' WHERE id = $id";
-    if ($pdo->query($sql)) {
+    $sql = $pdo->prepare("UPDATE CentroMedico SET nombre = ?, comuna = ?, region = ? WHERE id_centro = ?");
+    if ($sql->execute([$nombre, $comuna, $region, $id])) {
         $mensaje = "<div class='alert alert-success'>Centro actualizado.</div>";
     }
 }
 
-$centros = $pdo->query("SELECT * FROM CentroMedico ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+$centros = $pdo->query("SELECT *, id_centro AS id FROM CentroMedico ORDER BY id_centro DESC")->fetchAll(PDO::FETCH_ASSOC);
 
 // si nos piden editar un centro en especifico, se cargan sus datos en el formulario
 $centro_a_editar = null;
 if (isset($_GET['editar'])) {
     $id_edit = $_GET['editar'];
-    $centro_a_editar = $pdo->query("SELECT * FROM CentroMedico WHERE id = $id_edit")->fetch(PDO::FETCH_ASSOC);
+    $stmt_edit = $pdo->prepare("SELECT *, id_centro AS id FROM CentroMedico WHERE id_centro = ?");
+    $stmt_edit->execute([$id_edit]);
+    $centro_a_editar = $stmt_edit->fetch(PDO::FETCH_ASSOC);
 }
 
 include 'header.php';

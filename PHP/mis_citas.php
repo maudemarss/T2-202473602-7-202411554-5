@@ -18,21 +18,21 @@ if (isset($_GET['cancelar_id'])) {
     
     try {
         // obtenemos el id del estado cancelada
-        $consulta_estado_cancelada = $pdo->query("SELECT id FROM EstadoCita WHERE nombre = 'Cancelada'");
-        $estado_cancelada = $consulta_estado_cancelada->fetch(PDO::FETCH_ASSOC)['id'];
+        $consulta_estado_cancelada = $pdo->query("SELECT id_estado FROM EstadoCita WHERE nombre = 'Cancelada'");
+        $estado_cancelada = $consulta_estado_cancelada->fetch(PDO::FETCH_ASSOC)['id_estado'];
 
         // obtenemos los ids de reservada y confirmada.
-        $consulta_estados_validos = $pdo->query("SELECT id FROM EstadoCita WHERE nombre IN ('Reservada', 'Confirmada')");
+        $consulta_estados_validos = $pdo->query("SELECT id_estado FROM EstadoCita WHERE nombre IN ('Reservada', 'Confirmada')");
         $estados_validos = $consulta_estados_validos->fetchAll(PDO::FETCH_COLUMN);
 
         if ($estado_cancelada && count($estados_validos) > 0) {
             // actualizamos la cita a cancelada solo si pertenece al paciente
             $sql_cancelar = "UPDATE Cita 
-                             SET id_estado_cita = :id_cancelada 
-                             WHERE id = :id_cita 
+                             SET id_estado = :id_cancelada 
+                             WHERE id_cita = :id_cita 
                                AND id_paciente = :id_paciente 
                                AND fecha_hora > NOW() 
-                               AND id_estado_cita IN (" . implode(',', $estados_validos) . ")";
+                               AND id_estado IN (" . implode(',', $estados_validos) . ")";
             
             $sentencia_cancelar = $pdo->prepare($sql_cancelar);
             $sentencia_cancelar->execute([
@@ -55,13 +55,13 @@ if (isset($_GET['cancelar_id'])) {
 // obtener las citas
 try {
     // 1) citas próximas, fecha >= hoy
-    $sql_proximas = "SELECT c.id, c.fecha_hora, m.nombre_completo AS medico, e.nombre AS especialidad, 
+    $sql_proximas = "SELECT c.id_cita AS id, c.fecha_hora, m.nombre_completo AS medico, e.nombre AS especialidad, 
                             cen.nombre AS centro, est.nombre AS estado 
                      FROM Cita c
-                     JOIN Medico m ON c.id_medico = m.id
-                     JOIN Especialidad e ON c.id_especialidad = e.id
-                     JOIN CentroMedico cen ON c.id_centro = cen.id
-                     JOIN EstadoCita est ON c.id_estado_cita = est.id
+                     JOIN Medico m ON c.id_medico = m.id_medico
+                     JOIN Especialidad e ON c.id_especialidad = e.id_especialidad
+                     JOIN CentroMedico cen ON c.id_centro = cen.id_centro
+                     JOIN EstadoCita est ON c.id_estado = est.id_estado
                      WHERE c.id_paciente = :id_paciente AND c.fecha_hora >= NOW()
                      ORDER BY c.fecha_hora ASC";
     
@@ -70,13 +70,13 @@ try {
     $citas_proximas = $sentencia_proximas->fetchAll(PDO::FETCH_ASSOC);
 
     // 2) citas históricas, fecha < hoy
-    $sql_historicas = "SELECT c.id, c.fecha_hora, m.nombre_completo AS medico, e.nombre AS especialidad, 
+    $sql_historicas = "SELECT c.id_cita AS id, c.fecha_hora, m.nombre_completo AS medico, e.nombre AS especialidad, 
                               cen.nombre AS centro, est.nombre AS estado 
                        FROM Cita c
-                       JOIN Medico m ON c.id_medico = m.id
-                       JOIN Especialidad e ON c.id_especialidad = e.id
-                       JOIN CentroMedico cen ON c.id_centro = cen.id
-                       JOIN EstadoCita est ON c.id_estado_cita = est.id
+                       JOIN Medico m ON c.id_medico = m.id_medico
+                       JOIN Especialidad e ON c.id_especialidad = e.id_especialidad
+                       JOIN CentroMedico cen ON c.id_centro = cen.id_centro
+                       JOIN EstadoCita est ON c.id_estado = est.id_estado
                        WHERE c.id_paciente = :id_paciente AND c.fecha_hora < NOW()
                        ORDER BY c.fecha_hora DESC";
     

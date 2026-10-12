@@ -14,11 +14,17 @@ $top_diagnosticos = [];
 
 try {
     // obtener el total de citas
-    $stmt_total = $pdo->query("SELECT fn_total_citas() AS total");
+    $stmt_total = $pdo->query("SELECT COUNT(*) AS total FROM Cita");
     $total_citas = $stmt_total->fetch(PDO::FETCH_ASSOC)['total'];
 
     // obtener el porcentaje de inasistencia por centro
-    $stmt_inasistencia = $pdo->query("SELECT * FROM Vista_Inasistencia_Centros");
+    $stmt_inasistencia = $pdo->query("SELECT cm.nombre AS centro, COUNT(c.id_cita) AS total_citas,
+                                             COALESCE(SUM(c.id_estado = 4), 0) AS total_inasistencias,
+                                             fn_pct_inasistencia(cm.id_centro) AS porcentaje_inasistencia
+                                      FROM CentroMedico cm
+                                      LEFT JOIN Cita c ON c.id_centro = cm.id_centro
+                                      GROUP BY cm.id_centro, cm.nombre
+                                      ORDER BY cm.nombre");
     $inasistencias = $stmt_inasistencia->fetchAll(PDO::FETCH_ASSOC);
 
     // los 5 diagnosticos mas frecuentes
@@ -32,7 +38,7 @@ try {
     $top_diagnosticos = $stmt_top->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
-    $error_bd = "Atención: Faltan crear la Función y la Vista en la base de datos MySQL. (Error: " . $e->getMessage() . ")";
+    $error_bd = "Error al cargar el panel: " . $e->getMessage();
 }
 
 include 'header.php';

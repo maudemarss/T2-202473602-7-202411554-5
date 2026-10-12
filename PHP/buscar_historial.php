@@ -18,7 +18,7 @@ if (isset($_GET['rut_paciente'])) {
     $rut_buscado = trim($_GET['rut_paciente']);
     
     // busca si el paciente existe en la base de datos
-    $sql_paciente = "SELECT id, nombre_completo, fecha_nacimiento FROM Paciente WHERE rut = '$rut_buscado'";
+    $sql_paciente = "SELECT id_paciente AS id, nombre_completo, fecha_nacimiento FROM Paciente WHERE rut = '$rut_buscado'";
     $res_paciente = $pdo->query($sql_paciente);
     $paciente_info = $res_paciente->fetch(PDO::FETCH_ASSOC);
 
@@ -26,12 +26,12 @@ if (isset($_GET['rut_paciente'])) {
         $id_paciente = $paciente_info['id'];
         
         // busca todas las atenciones del paciente
-        $sql_atenciones = "SELECT a.id as id_atencion, a.motivo_consulta, a.observaciones, 
+        $sql_atenciones = "SELECT a.id_atencion as id_atencion, a.motivo_consulta, a.observaciones, 
                                   c.fecha_hora, m.nombre_completo as medico, e.nombre as especialidad
                            FROM Atencion a
-                           JOIN Cita c ON a.id_cita = c.id
-                           JOIN Medico m ON c.id_medico = m.id
-                           JOIN Especialidad e ON c.id_especialidad = e.id
+                           JOIN Cita c ON a.id_cita = c.id_cita
+                           JOIN Medico m ON c.id_medico = m.id_medico
+                           JOIN Especialidad e ON c.id_especialidad = e.id_especialidad
                            WHERE c.id_paciente = $id_paciente
                            ORDER BY c.fecha_hora DESC";
 

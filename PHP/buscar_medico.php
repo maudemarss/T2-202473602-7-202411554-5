@@ -21,22 +21,22 @@ if (isset($_GET['termino_busqueda'])) {
             // consulta sql para buscar por nombre o especialidad.
             // usamos GROUP_CONCAT, ya que si usaramos JOIN, un medico con mas de una especialidad apareceria repetido
             $sql = "SELECT 
-                        m.id, 
+                        m.id_medico AS id, 
                         m.nombre_completo,
                         (SELECT GROUP_CONCAT(e.nombre SEPARATOR ', ') 
                          FROM Especialidad e 
-                         JOIN Medico_Especialidad me ON e.id = me.id_especialidad 
-                         WHERE me.id_medico = m.id) as especialidades,
+                         JOIN Medico_Especialidad me ON e.id_especialidad = me.id_especialidad 
+                         WHERE me.id_medico = m.id_medico) as especialidades,
                         (SELECT GROUP_CONCAT(c.nombre SEPARATOR ', ') 
                          FROM CentroMedico c 
-                         JOIN Medico_Centro mc ON c.id = mc.id_centro 
-                         WHERE mc.id_medico = m.id) as centros
+                         JOIN Medico_Centro mc ON c.id_centro = mc.id_centro 
+                         WHERE mc.id_medico = m.id_medico) as centros
                     FROM Medico m
                     WHERE m.nombre_completo LIKE :termino 
-                       OR m.id IN (
+                       OR m.id_medico IN (
                            SELECT me2.id_medico 
                            FROM Medico_Especialidad me2 
-                           JOIN Especialidad e2 ON me2.id_especialidad = e2.id 
+                           JOIN Especialidad e2 ON me2.id_especialidad = e2.id_especialidad 
                            WHERE e2.nombre LIKE :termino
                        )";
             

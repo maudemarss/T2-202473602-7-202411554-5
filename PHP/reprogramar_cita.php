@@ -23,11 +23,11 @@ try {
     // buscamos la cita asegurándonos que sea del paciente y este en estado valido
     $sql_cita = "SELECT c.*, m.nombre_completo as medico, e.nombre as especialidad, cen.nombre as centro 
                  FROM Cita c
-                 JOIN Medico m ON c.id_medico = m.id
-                 JOIN Especialidad e ON c.id_especialidad = e.id
-                 JOIN CentroMedico cen ON c.id_centro = cen.id
-                 JOIN EstadoCita est ON c.id_estado_cita = est.id
-                 WHERE c.id = :id_cita 
+                 JOIN Medico m ON c.id_medico = m.id_medico
+                 JOIN Especialidad e ON c.id_especialidad = e.id_especialidad
+                 JOIN CentroMedico cen ON c.id_centro = cen.id_centro
+                 JOIN EstadoCita est ON c.id_estado = est.id_estado
+                 WHERE c.id_cita = :id_cita 
                    AND c.id_paciente = :id_paciente 
                    AND c.fecha_hora > NOW() 
                    AND est.nombre IN ('Reservada', 'Confirmada')";
@@ -55,20 +55,20 @@ $bloques_disponibles = [];
 if (!empty($fecha_seleccionada)) {
     // horario de atencion y bloques igual que en el otro archivo que no me acuerdo
     $hora_inicio = strtotime('09:00');
-    $hora_fin = strtotime('17:00');
+    $hora_fin = strtotime('18:00');
     $duracion_bloque = 30 * 60; 
     
     // buscar horas ocupadas del medico en esa nueva fecha
     $sql_ocupadas = "SELECT DATE_FORMAT(fecha_hora, '%H:%i') 
                      FROM Cita 
-                     WHERE id_medico = :id_medico 
+                     WHERE (id_medico = :id_medico OR id_paciente = :id_paciente)
                        AND DATE(fecha_hora) = :fecha 
-                       AND id != :id_cita_actual
-                       AND id_estado_cita != (SELECT id FROM EstadoCita WHERE nombre = 'Cancelada')";
+                       AND id_cita != :id_cita_actual";
                        
     $stmt_ocupadas = $pdo->prepare($sql_ocupadas);
     $stmt_ocupadas->execute([
         ':id_medico' => $cita_actual['id_medico'], 
+        ':id_paciente' => $id_paciente,
         ':fecha' => $fecha_seleccionada,
         ':id_cita_actual' => $id_cita // evita que la misma cita bloquee su propio horario si la elegimos el mismo día
     ]);
@@ -77,7 +77,7 @@ if (!empty($fecha_seleccionada)) {
     //generar horas y descartar las ocupadas
     for ($i = $hora_inicio; $i < $hora_fin; $i += $duracion_bloque) {
         $hora_actual = date('H:i', $i);
-        if (!in_array($hora_actual, $horas_ocupadas)) {
+        if (!in_array($hora_actual, $horas_ocupadas) && strtotime($fecha_seleccionada . ' ' . $hora_actual) > time()) {
             $bloques_disponibles[] = $hora_actual;
         }
     }
@@ -89,7 +89,7 @@ if (isset($_POST['hora_nueva'])) {
     
     try {
         // hacemos el update de la cita sin sobreagendar
-        $sql_update = "UPDATE Cita SET fecha_hora = :nueva_fecha_hora WHERE id = :id_cita";
+        $sql_update = "UPDATE Cita SET fecha_hora = :nueva_fecha_hora WHERE id_cita = :id_cita";
         $stmt_update = $pdo->prepare($sql_update);
         
         if ($stmt_update->execute([':nueva_fecha_hora' => $nueva_fecha_hora, ':id_cita' => $id_cita])) {
@@ -98,7 +98,12 @@ if (isset($_POST['hora_nueva'])) {
             exit();
         }
     } catch (PDOException $e) {
-        $error_update = "Error al reprogramar. Es posible que el horario ya se haya ocupado.";
+        $detalle = $e->getMessage();
+        if (strpos($detalle, 'unq_paciente_hora') !== false) {
+            $error_update = "Usted ya tiene una cita agendada a esa misma fecha y hora.";
+        } else {
+            $error_update = "Error al reprogramar. Es posible que el horario ya se haya ocupado.";
+        }
     }
 }
 

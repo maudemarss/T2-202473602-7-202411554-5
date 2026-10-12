@@ -1,5 +1,5 @@
 <?php
-// SUPUESTO: bloques de media hora y la atencion es desde las 9 am hasta las 5 pm
+// SUPUESTO: bloques de media hora y la atencion es desde las 9 am hasta las 6 pm
 session_start();
 // solo los pacientes pueden agendar citas (rol 1)
 if (!isset($_SESSION['identificador_usuario']) || $_SESSION['rol_usuario'] != 1) {
@@ -19,15 +19,15 @@ $medico_seleccionado = isset($_POST['id_medico']) ? $_POST['id_medico'] : '';
 $fecha_seleccionada = isset($_POST['fecha']) ? $_POST['fecha'] : date('Y-m-d');
 
 // obtener las especialidades
-$stmt_especialidades = $pdo->query("SELECT id, nombre FROM Especialidad ORDER BY nombre");
+$stmt_especialidades = $pdo->query("SELECT id_especialidad AS id, nombre FROM Especialidad ORDER BY nombre");
 $especialidades = $stmt_especialidades->fetchAll(PDO::FETCH_ASSOC);
 
 // si se eligió especialidad, obtener los centros donde atienden los medicos con esta especialidad. 
 $centros = [];
 if (!empty($especialidad_seleccionada)) {
-    $sql_centros = "SELECT DISTINCT c.id, c.nombre 
+    $sql_centros = "SELECT DISTINCT c.id_centro AS id, c.nombre 
                     FROM CentroMedico c
-                    JOIN Medico_Centro mc ON c.id = mc.id_centro
+                    JOIN Medico_Centro mc ON c.id_centro = mc.id_centro
                     JOIN Medico_Especialidad me ON mc.id_medico = me.id_medico
                     WHERE me.id_especialidad = :id_esp";
     $stmt = $pdo->prepare($sql_centros);
@@ -37,10 +37,10 @@ if (!empty($especialidad_seleccionada)) {
 
 // si se selecciono un centro y una especialidad, arroja los medicos disponibles
 if (!empty($centro_seleccionado) && !empty($especialidad_seleccionada)) {
-    $sql_medicos = "SELECT m.id, m.nombre_completo 
+    $sql_medicos = "SELECT m.id_medico AS id, m.nombre_completo 
                     FROM Medico m
-                    JOIN Medico_Centro mc ON m.id = mc.id_medico
-                    JOIN Medico_Especialidad me ON m.id = me.id_medico
+                    JOIN Medico_Centro mc ON m.id_medico = mc.id_medico
+                    JOIN Medico_Especialidad me ON m.id_medico = me.id_medico
                     WHERE mc.id_centro = :id_cen AND me.id_especialidad = :id_esp";
     $stmt = $pdo->prepare($sql_medicos);
     $stmt->execute([':id_cen' => $centro_seleccionado, ':id_esp' => $especialidad_seleccionada]);
@@ -52,22 +52,21 @@ $bloques_disponibles = [];
 if (!empty($medico_seleccionado) && !empty($fecha_seleccionada)) {
     //horario de atencion
     $hora_inicio = strtotime('09:00');
-    $hora_fin = strtotime('17:00');
+    $hora_fin = strtotime('18:00');
     $duracion_bloque = 30 * 60; // 30 minutos en los segundos
     
     // obtener las horas que ya estan ocupadas por el médico en esa fecha
     $sql_ocupadas = "SELECT DATE_FORMAT(fecha_hora, '%H:%i') as hora_ocupada 
                      FROM Cita 
-                     WHERE id_medico = :id_med AND DATE(fecha_hora) = :fecha 
-                     AND id_estado_cita != (SELECT id FROM EstadoCita WHERE nombre = 'Cancelada')";
+                     WHERE (id_medico = :id_med OR id_paciente = :id_pac) AND DATE(fecha_hora) = :fecha";
     $stmt_ocupadas = $pdo->prepare($sql_ocupadas);
-    $stmt_ocupadas->execute([':id_med' => $medico_seleccionado, ':fecha' => $fecha_seleccionada]);
+    $stmt_ocupadas->execute([':id_med' => $medico_seleccionado, ':id_pac' => $paciente_id, ':fecha' => $fecha_seleccionada]);
     $horas_ocupadas = $stmt_ocupadas->fetchAll(PDO::FETCH_COLUMN);
 
     // generar la lista de horas y descartasr las ocupadas
     for ($i = $hora_inicio; $i < $hora_fin; $i += $duracion_bloque) {
         $hora_actual = date('H:i', $i);
-        if (!in_array($hora_actual, $horas_ocupadas)) {
+        if (!in_array($hora_actual, $horas_ocupadas) && strtotime($fecha_seleccionada . ' ' . $hora_actual) > time()) {
             $bloques_disponibles[] = $hora_actual;
         }
     }
@@ -86,7 +85,7 @@ if (!empty($medico_seleccionado) && !empty($fecha_seleccionada)) {
                     <div class="alert alert-success">Su cita ha sido agendada con éxito!!!</div>
                 <?php endif; ?>
                 <?php if(isset($_GET['error'])): ?>
-                    <div class="alert alert-danger">Ocurrió un error al agendar. Puede que el horario ya esté ocupado.</div>
+                    <div class="alert alert-danger"><?php echo htmlspecialchars($_GET['error'] != '1' ? $_GET['error'] : 'Ocurrió un error al agendar. Puede que el horario ya esté ocupado.'); ?></div>
                 <?php endif; ?>
 
                 <!--formulario-->

@@ -11,12 +11,12 @@ if (!isset($_SESSION['identificador_usuario']) || $_SESSION['rol_usuario'] != 1)
 $id_paciente = $_SESSION['identificador_usuario'];
 
 // buscar todas las atenciones del paciente
-$sql_atenciones = "SELECT a.id as id_atencion, a.motivo_consulta, a.observaciones, 
+$sql_atenciones = "SELECT a.id_atencion as id_atencion, a.motivo_consulta, a.observaciones, 
                           c.fecha_hora, m.nombre_completo as medico, e.nombre as especialidad
                    FROM Atencion a
-                   JOIN Cita c ON a.id_cita = c.id
-                   JOIN Medico m ON c.id_medico = m.id
-                   JOIN Especialidad e ON c.id_especialidad = e.id
+                   JOIN Cita c ON a.id_cita = c.id_cita
+                   JOIN Medico m ON c.id_medico = m.id_medico
+                   JOIN Especialidad e ON c.id_especialidad = e.id_especialidad
                    WHERE c.id_paciente = '$id_paciente'
                    ORDER BY c.fecha_hora DESC";
 

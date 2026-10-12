@@ -22,17 +22,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     try {
         // 3) obtener el id del estado "reservada" 
-        $stmt_estado = $pdo->prepare("SELECT id FROM EstadoCita WHERE nombre = 'Reservada'");
+        $stmt_estado = $pdo->prepare("SELECT id_estado FROM EstadoCita WHERE nombre = 'Reservada'");
         $stmt_estado->execute();
         $estado = $stmt_estado->fetch(PDO::FETCH_ASSOC);
         
         if (!$estado) {
             die("Error crítico: No existe el estado 'Reservada' en la base de datos.");
         }
-        $id_estado_cita = $estado['id'];
+        $id_estado_cita = $estado['id_estado'];
+
+        if (strtotime($fecha_hora) === false || strtotime($fecha_hora) <= time()) {
+            header("Location: agendar_cita.php?error=" . urlencode("No se puede agendar una cita en una fecha u hora que ya pasó."));
+            exit();
+        }
 
         // 4) Intentar insertar la cita
-        $sql_insertar = "INSERT INTO Cita (fecha_hora, id_paciente, id_medico, id_centro, id_especialidad, id_estado_cita) 
+        $sql_insertar = "INSERT INTO Cita (fecha_hora, id_paciente, id_medico, id_centro, id_especialidad, id_estado) 
                          VALUES (:fecha_hora, :id_paciente, :id_medico, :id_centro, :id_especialidad, :id_estado_cita)";
         
         $stmt_insertar = $pdo->prepare($sql_insertar);
@@ -53,7 +58,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
     } catch (PDOException $e) {
-        header("Location: agendar_cita.php?error=1");
+        $detalle = $e->getMessage();
+        if (strpos($detalle, 'unq_medico_hora') !== false) {
+            $msg = "El médico ya tiene una cita agendada en ese horario.";
+        } elseif (strpos($detalle, 'unq_paciente_hora') !== false) {
+            $msg = "Usted ya tiene una cita agendada a esa misma fecha y hora.";
+        } elseif (strpos($detalle, 'foreign key') !== false) {
+            $msg = "El médico no posee la especialidad solicitada o no atiende en el centro seleccionado.";
+        } else {
+            $msg = "Ocurrió un error al agendar la cita.";
+        }
+        header("Location: agendar_cita.php?error=" . urlencode($msg));
         exit();
     }
 } else {

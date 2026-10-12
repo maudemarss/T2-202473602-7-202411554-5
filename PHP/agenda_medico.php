@@ -19,7 +19,7 @@ if (isset($_POST['cambiar_estado']) && isset($_POST['id_cita']) && isset($_POST[
 
     try {
         //validamos que la cita sea de este medico antes de actualizarla
-        $sql_update = "UPDATE Cita SET id_estado_cita = :nuevo_estado WHERE id = :id_cita AND id_medico = :id_medico";
+        $sql_update = "UPDATE Cita SET id_estado = :nuevo_estado WHERE id_cita = :id_cita AND id_medico = :id_medico";
         $stmt_update = $pdo->prepare($sql_update);
         $stmt_update->execute([
             ':nuevo_estado' => $nuevo_estado_id,
@@ -33,7 +33,7 @@ if (isset($_POST['cambiar_estado']) && isset($_POST['id_cita']) && isset($_POST[
             $mensaje_error = "No se pudo actualizar el estado. la cita no existe o no te pertenece";
         }
     } catch (PDOException $e) {
-        $mensaje_error = "Error al actualizar el estado de la cita.";
+        $mensaje_error = isset($e->errorInfo[2]) && $e->errorInfo[0] == '45000' ? $e->errorInfo[2] : "Error al actualizar el estado de la cita.";
     }
 }
 
@@ -44,13 +44,13 @@ $fecha_agenda = isset($_GET['fecha_agenda']) ? $_GET['fecha_agenda'] : date('Y-m
 // consultas para cagar los datos
 try {
     // 1)obtenemos todas las citas del medico para la fecha elegida
-    $sql_agenda = "SELECT c.id, c.fecha_hora, p.nombre_completo AS paciente, p.rut AS rut_paciente, 
-                          prev.nombre AS prevision, cen.nombre AS centro, est.nombre AS estado, est.id AS id_estado
+    $sql_agenda = "SELECT c.id_cita AS id, c.fecha_hora, p.nombre_completo AS paciente, p.rut AS rut_paciente, 
+                          prev.nombre AS prevision, cen.nombre AS centro, est.nombre AS estado, est.id_estado AS id_estado
                    FROM Cita c
-                   JOIN Paciente p ON c.id_paciente = p.id
-                   JOIN Prevision prev ON p.id_prevision = prev.id
-                   JOIN CentroMedico cen ON c.id_centro = cen.id
-                   JOIN EstadoCita est ON c.id_estado_cita = est.id
+                   JOIN Paciente p ON c.id_paciente = p.id_paciente
+                   JOIN Prevision prev ON p.id_prevision = prev.id_prevision
+                   JOIN CentroMedico cen ON c.id_centro = cen.id_centro
+                   JOIN EstadoCita est ON c.id_estado = est.id_estado
                    WHERE c.id_medico = :id_medico 
                      AND DATE(c.fecha_hora) = :fecha_agenda
                    ORDER BY c.fecha_hora ASC";
@@ -63,7 +63,7 @@ try {
     $citas_del_dia = $stmt_agenda->fetchAll(PDO::FETCH_ASSOC);
 
     // 2) obtenemos los estados permitidos para el medico, o sea confirmada, atendida o no asistio. 
-    $sql_estados = "SELECT id, nombre FROM EstadoCita WHERE nombre IN ('Confirmada', 'Atendida', 'No Asistió')";
+    $sql_estados = "SELECT id_estado AS id, nombre FROM EstadoCita WHERE nombre IN ('Confirmada', 'Atendida', 'No Asistió')";
     $estados_permitidos = $pdo->query($sql_estados)->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {

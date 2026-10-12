@@ -12,61 +12,55 @@ $rol_usuario = $_SESSION['rol_usuario'];
 $id_usuario = $_SESSION['identificador_usuario'];
 
 // cargar catalogos para los select
-$centros = $pdo->query("SELECT id, nombre FROM CentroMedico")->fetchAll(PDO::FETCH_ASSOC);
+$centros = $pdo->query("SELECT id_centro AS id, nombre FROM CentroMedico")->fetchAll(PDO::FETCH_ASSOC);
 // Obtenemos solo las regiones que existen en los centros
 $regiones = $pdo->query("SELECT DISTINCT region FROM CentroMedico")->fetchAll(PDO::FETCH_ASSOC);
-$especialidades = $pdo->query("SELECT id, nombre FROM Especialidad")->fetchAll(PDO::FETCH_ASSOC);
-$medicos = $pdo->query("SELECT id, nombre_completo FROM Medico")->fetchAll(PDO::FETCH_ASSOC);
-$estados = $pdo->query("SELECT id, nombre FROM EstadoCita")->fetchAll(PDO::FETCH_ASSOC);
-$previsiones = $pdo->query("SELECT id, nombre FROM Prevision")->fetchAll(PDO::FETCH_ASSOC);
+$especialidades = $pdo->query("SELECT id_especialidad AS id, nombre FROM Especialidad")->fetchAll(PDO::FETCH_ASSOC);
+$medicos = $pdo->query("SELECT id_medico AS id, nombre_completo FROM Medico")->fetchAll(PDO::FETCH_ASSOC);
+$estados = $pdo->query("SELECT id_estado AS id, nombre FROM EstadoCita")->fetchAll(PDO::FETCH_ASSOC);
+$previsiones = $pdo->query("SELECT id_prevision AS id, nombre FROM Prevision")->fetchAll(PDO::FETCH_ASSOC);
 
 // consulta sql dinamica uniendo todas las tablas necesarias
-$sql = "SELECT c.fecha_hora, p.nombre_completo AS paciente, m.nombre_completo AS medico, 
-               e.nombre AS especialidad, cen.nombre AS centro, est.nombre AS estado
-        FROM Cita c
-        JOIN Paciente p ON c.id_paciente = p.id
-        JOIN Medico m ON c.id_medico = m.id
-        JOIN Especialidad e ON c.id_especialidad = e.id
-        JOIN CentroMedico cen ON c.id_centro = cen.id
-        JOIN EstadoCita est ON c.id_estado_cita = est.id
-        JOIN Prevision prev ON p.id_prevision = prev.id
+$sql = "SELECT v.fecha_hora, v.nombre_paciente AS paciente, v.nombre_medico AS medico, 
+               v.especialidad, v.nombre_centro AS centro, v.estado
+        FROM vw_citas_detalle v
         WHERE 1=1 ";
 
 // restriccion por rol
 if ($rol_usuario == 1) {
     // el paciente ve sus citas
-    $sql .= " AND c.id_paciente = $id_usuario ";
+    $sql .= " AND v.id_paciente = $id_usuario ";
 } elseif ($rol_usuario == 2) {
     // el medico ve sus citas
-    $sql .= " AND c.id_medico = $id_usuario ";
+    $sql .= " AND v.id_medico = $id_usuario ";
 }
 // si es admin (rol 3), no agregamos nada y podrá ver todas las de la red
 if (!empty($_GET['fecha_desde'])) {
-    $sql .= " AND DATE(c.fecha_hora) >= '" . $_GET['fecha_desde'] . "' ";
+    $sql .= " AND DATE(v.fecha_hora) >= '" . $_GET['fecha_desde'] . "' ";
 }
 if (!empty($_GET['fecha_hasta'])) {
-    $sql .= " AND DATE(c.fecha_hora) <= '" . $_GET['fecha_hasta'] . "' ";
+    $sql .= " AND DATE(v.fecha_hora) <= '" . $_GET['fecha_hasta'] . "' ";
 }
 if (!empty($_GET['id_centro'])) {
-    $sql .= " AND c.id_centro = " . $_GET['id_centro'] . " ";
+    $sql .= " AND v.id_centro = " . $_GET['id_centro'] . " ";
 }
 if (!empty($_GET['region'])) {
-    $sql .= " AND cen.region = '" . $_GET['region'] . "' ";
+    $sql .= " AND v.region = '" . $_GET['region'] . "' ";
 }
 if (!empty($_GET['id_especialidad'])) {
-    $sql .= " AND c.id_especialidad = " . $_GET['id_especialidad'] . " ";
+    $sql .= " AND v.id_especialidad = " . $_GET['id_especialidad'] . " ";
 }
 if (!empty($_GET['id_medico'])) {
-    $sql .= " AND c.id_medico = " . $_GET['id_medico'] . " ";
+    $sql .= " AND v.id_medico = " . $_GET['id_medico'] . " ";
 }
 if (!empty($_GET['id_estado'])) {
-    $sql .= " AND c.id_estado_cita = " . $_GET['id_estado'] . " ";
+    $sql .= " AND v.id_estado = " . $_GET['id_estado'] . " ";
 }
 if (!empty($_GET['id_prevision'])) {
-    $sql .= " AND p.id_prevision = " . $_GET['id_prevision'] . " ";
+    $sql .= " AND v.id_prevision = " . $_GET['id_prevision'] . " ";
 }
 
-$sql .= " ORDER BY c.fecha_hora DESC";
+$sql .= " ORDER BY v.fecha_hora DESC";
 
 $resultados = [];
 $busqueda_activa = false;
