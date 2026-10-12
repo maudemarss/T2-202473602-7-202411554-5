@@ -3,7 +3,7 @@ include 'header.php';
 require_once 'conexion.php';
 
 //obtener las previsiones para el select
-$consulta_prevision = $pdo->query("SELECT id, nombre FROM Prevision");
+$consulta_prevision = $pdo->query("SELECT id_prevision, nombre FROM Prevision");
 $previsiones = $consulta_prevision->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <div class="row justify-content-center mt-4 mb-5">
@@ -19,6 +19,11 @@ $previsiones = $consulta_prevision->fetchAll(PDO::FETCH_ASSOC);
                         <?php 
                             if($_GET['error'] == 'duplicado') echo "El RUT o correo electrónico ya se encuentran registrados.";
                             if($_GET['error'] == 'sistema') echo "Ocurrió un error en el sistema. Intente nuevamente.";
+                            if($_GET['error'] == 'campos') echo "Todos los campos obligatorios deben estar completos y ser válidos.";
+                            if($_GET['error'] == 'rut') echo "El RUT debe tener el formato XXXXXXXX-X (con guión y dígito verificador).";
+                            if($_GET['error'] == 'correo') echo "El correo electrónico no tiene un formato válido.";
+                            if($_GET['error'] == 'contrasena') echo "La contraseña debe tener al menos 8 caracteres, con letras y números.";
+                            if($_GET['error'] == 'fecha') echo "La fecha de nacimiento no es válida.";
                         ?>
                     </div>
                 <?php endif; ?>
@@ -41,8 +46,8 @@ $previsiones = $consulta_prevision->fetchAll(PDO::FETCH_ASSOC);
                             <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="contrasena" class="form-label">Contraseña (Mín. 6 caracteres)</label>
-                            <input type="password" class="form-control" id="contrasena" name="contrasena" required minlength="6">
+                            <label for="contrasena" class="form-label">Contraseña (Mín. 8, con letras y números)</label>
+                            <input type="password" class="form-control" id="contrasena" name="contrasena" required minlength="8">
                         </div>
                     </div>
 
@@ -65,7 +70,7 @@ $previsiones = $consulta_prevision->fetchAll(PDO::FETCH_ASSOC);
                             <select class="form-select" id="id_prevision" name="id_prevision" required>
                                 <option value="">Seleccione...</option>
                                 <?php foreach($previsiones as $prev): ?>
-                                    <option value="<?php echo $prev['id']; ?>"><?php echo $prev['nombre']; ?></option>
+                                    <option value="<?php echo $prev['id_prevision']; ?>"><?php echo $prev['nombre']; ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>

@@ -3,47 +3,44 @@ session_start();
 require_once 'conexion.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $rut = $_POST['rut'];
+    $email = trim($_POST['email']);
     $password = $_POST['password'];
 
     try {
-        // 1) verificar si es un paciente (rol 1)
-        $consulta_paciente = $pdo->prepare("SELECT id, nombre_completo, password FROM Paciente WHERE rut = :rut");
-        $consulta_paciente->execute([':rut' => $rut]);
-        $datos_paciente = $consulta_paciente->fetch(PDO::FETCH_ASSOC);
+        $consulta_usuario = $pdo->prepare("SELECT id_usuario, password_hash, id_rol FROM Usuario WHERE email = :email");
+        $consulta_usuario->execute([':email' => $email]);
+        $datos_usuario = $consulta_usuario->fetch(PDO::FETCH_ASSOC);
 
-        // verificamos si existe el paciente y si la contraseña coincide
-        if ($datos_paciente && password_verify($password, $datos_paciente['password'])) {
-            $_SESSION['identificador_usuario'] = $datos_paciente['id'];
-            $_SESSION['nombre_usuario'] = $datos_paciente['nombre_completo'];
-            $_SESSION['rol_usuario'] = 1;
+        if ($datos_usuario && password_verify($password, $datos_usuario['password_hash'])) {
+            $rol = (int)$datos_usuario['id_rol'];
+            $identificador = 0;
+            $nombre = 'Administrador SaludUSM';
+
+            if ($rol == 1) {
+                $consulta = $pdo->prepare("SELECT id_paciente AS id, nombre_completo FROM Paciente WHERE id_usuario = :id_usuario");
+                $consulta->execute([':id_usuario' => $datos_usuario['id_usuario']]);
+                $datos = $consulta->fetch(PDO::FETCH_ASSOC);
+                $identificador = $datos['id'];
+                $nombre = $datos['nombre_completo'];
+            } elseif ($rol == 2) {
+                $consulta = $pdo->prepare("SELECT id_medico AS id, nombre_completo FROM Medico WHERE id_usuario = :id_usuario");
+                $consulta->execute([':id_usuario' => $datos_usuario['id_usuario']]);
+                $datos = $consulta->fetch(PDO::FETCH_ASSOC);
+                $identificador = $datos['id'];
+                $nombre = $datos['nombre_completo'];
+            }
+
+            $_SESSION['id_usuario'] = $datos_usuario['id_usuario'];
+            $_SESSION['identificador_usuario'] = $identificador;
+            $_SESSION['nombre_usuario'] = $nombre;
+            $_SESSION['rol_usuario'] = $rol;
+
+            $pdo->exec("CALL sp_cancelar_citas_vencidas(@citas_canceladas)");
+
             header("Location: index.php");
             exit();
         }
 
-        // 2) si no es paciente, verificar si es médico (rol 2)
-        $consulta_medico = $pdo->prepare("SELECT id, nombre_completo, password FROM Medico WHERE rut = :rut");
-        $consulta_medico->execute([':rut' => $rut]);
-        $datos_medico = $consulta_medico->fetch(PDO::FETCH_ASSOC);
-
-        if ($datos_medico && password_verify($password, $datos_medico['password'])) {
-            $_SESSION['identificador_usuario'] = $datos_medico['id'];
-            $_SESSION['nombre_usuario'] = $datos_medico['nombre_completo'];
-            $_SESSION['rol_usuario'] = 2; // 2 = Médico
-            header("Location: index.php");
-            exit();
-        }
-
-        // 3)v erificar administrador. 
-        if ($rut === 'admin' && $password === 'admin123') {
-            $_SESSION['identificador_usuario'] = 0;
-            $_SESSION['nombre_usuario'] = 'Administrador SaludUSM';
-            $_SESSION['rol_usuario'] = 3; // 3 = Admin
-            header("Location: index.php");
-            exit();
-        }
-
-        // si llegó hasta aquí, el RUT o contraseña están mal
         header("Location: login.php?error=1");
         exit();
 

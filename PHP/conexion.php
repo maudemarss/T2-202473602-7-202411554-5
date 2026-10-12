@@ -1,11 +1,11 @@
 <?php
 $host = 'localhost';
-$dbname = 'saludusm'; 
+$dbname = 'salud_usm';
 $username = 'root';
 $password = '';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
     // configurar PDO para que lance excepciones por si hay error
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {

@@ -20,6 +20,9 @@
                         <li class="nav-item">
                             <a class="nav-link" href="index.php">Inicio</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="perfil.php">Mi Perfil</a>
+                        </li>
                         
                         <!-- enlaces para pacientes -->
                         <?php if($_SESSION['rol_usuario'] == 1): ?>

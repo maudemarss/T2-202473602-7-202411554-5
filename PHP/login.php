@@ -19,7 +19,7 @@ include 'header.php';
                 <?php if(isset($_GET['error'])): ?>
                     <div class="alert alert-danger">
                         <?php 
-                            if($_GET['error'] == 1) echo "RUT o contraseña incorrectos.";
+                            if($_GET['error'] == 1) echo "Correo o contraseña incorrectos.";
                             if($_GET['error'] == 2) echo "Debe iniciar sesión primero.";
                         ?>
                     </div>
@@ -27,8 +27,8 @@ include 'header.php';
 
                 <form action="procesar_login.php" method="POST">
                     <div class="mb-3">
-                        <label for="rut" class="form-label">RUT (Ej: 12345678-9)</label>
-                        <input type="text" class="form-control" id="rut" name="rut" required>
+                        <label for="email" class="form-label">Correo electrónico</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
                     </div>
                     <div class="mb-3">
                         <label for="password" class="form-label">Contraseña</label>
